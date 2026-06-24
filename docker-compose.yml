@@ -1,8 +1,6 @@
 services:
   api:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: rietberg_server:latest
     container_name: rietberg_server
     ports:
       - "5015:5015"
