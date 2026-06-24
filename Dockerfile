@@ -4,9 +4,7 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY package.json bun.lock* ./
-#COPY prisma ./prisma/
 RUN bun install
-#RUN bun x prisma generate
 COPY . .
-EXPOSE 5008
+EXPOSE 5015
 CMD ["bun", "src/main.ts"]
