@@ -7,7 +7,7 @@ on:
     branches: ['main']
 
 env:
-  DOCKER_IMAGE: 'chsm_rietberg_serverbot'
+  DOCKER_IMAGE: 'rietberg_server'
   DEPLOY_DIR: '/root/rietberg_server'
   CONTAINER_NAME: 'rietberg_server'
   HOST_PORT: '5015'
