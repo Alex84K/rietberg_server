@@ -1,0 +1,1 @@
+bun run --bun nest start --watch - START
