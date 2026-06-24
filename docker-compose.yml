@@ -9,5 +9,5 @@ services:
     env_file:
       - .env
     environment:
-      - PORT=5008
+      - PORT=5015
     restart: always
