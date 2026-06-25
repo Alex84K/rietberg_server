@@ -1,87 +1,94 @@
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe } from '@nestjs/common';
-import { AppModule } from './app.module';
+import {
+  ValidationPipe,
+  BadRequestException,
+  HttpException,
+  ExceptionFilter,
+  Catch,
+  ArgumentsHost,
+} from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
-import basicAuth from 'express-basic-auth';
+import { AppModule } from './app.module';
+
+@Catch()
+class AllExceptionsFilter implements ExceptionFilter {
+  catch(exception: unknown, host: ArgumentsHost) {
+    const ctx = host.switchToHttp();
+    const response = ctx.getResponse();
+
+    if (exception instanceof HttpException) {
+      const status = exception.getStatus();
+      const exceptionResponse = exception.getResponse();
+      return response.status(status).json({
+        error:
+          typeof exceptionResponse === 'string'
+            ? exceptionResponse
+            : (exceptionResponse as any).message || 'An error occurred',
+      });
+    }
+
+    if (exception instanceof Error) {
+      return response.status(500).json({
+        error: exception.message || 'Internal server error',
+      });
+    }
+
+    response.status(500).json({
+      error: 'Internal server error',
+    });
+  }
+}
 
 async function bootstrap() {
-  const PORT = process.env.PORT || 3000;
   const app = await NestFactory.create(AppModule);
-  //const app = await NestFactory.create(AppModule.register());
-  // Добавляем Basic Auth для Swagger
-  app.use(
-    ['/api/docs', '/api/docs-json', '/api/docs-download'],
-    basicAuth({
-      users: { admin: 'Abc!1234' },
-      challenge: true,
+  const configService = app.get(ConfigService);
+  const port = configService.get<number>('port') || 5015;
+  const isDev = configService.get<boolean>('dev') || false;
+
+  app.setGlobalPrefix('api');
+  app.getHttpAdapter().get('/', (_req, res) => res.json({ status: 'ok' }));
+
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
     }),
   );
 
-  // Настройка Swagger
-  const config = new DocumentBuilder()
-    .setTitle('CHSM Classroom Integrations')
-    .setDescription('Docs REST API')
-    .setVersion('1.0.0')
-    .addTag('ALEX K')
-    .addBearerAuth()
-    .build();
-  const document = SwaggerModule.createDocument(app, config);
+  app.useGlobalFilters(new AllExceptionsFilter());
 
-  // Эндпоинт для скачивания JSON
-  app.getHttpAdapter().get('/api/docs-download', (req, res) => {
-    res.setHeader('Content-Type', 'application/json');
-    res.setHeader('Content-Disposition', 'attachment; filename="swagger.json"');
-    res.send(document);
-  });
-
-  // Эндпоинт для скачивания YAML
-  app.getHttpAdapter().get('/api/docs-download/yaml', (req, res) => {
-    const yaml = require('js-yaml');
-    const yamlString = yaml.dump(document);
-    res.setHeader('Content-Type', 'application/x-yaml');
-    res.setHeader('Content-Disposition', 'attachment; filename="swagger.yaml"');
-    res.send(yamlString);
-  });
-
-  SwaggerModule.setup('/api/docs', app, document, {
-    swaggerOptions: {
-      persistAuthorization: true,
-    },
-  });
-
-  app.useGlobalPipes(new ValidationPipe());
   app.enableCors({
-    origin: (origin, callback) => {
-      if (!origin) {
-        return callback(null, true);
-      }
-
-      const allowedOrigins = [
-        'https://chsm.shk.solutions',
-        'https://chsm.pro',
-        'https://tma.chsm.pro',
-        'http://localhost:5173',
-        'http://localhost:5174',
-        'http://localhost:3000',
-        'http://localhost:3001',
-        'http://localhost:5008',
-      ];
-
-      const isAllowed =
-        allowedOrigins.includes(origin) ||
-        origin.startsWith('http://localhost:') ||
-        origin.startsWith('chrome-extension://');
-
-      if (isAllowed) {
-        callback(null, true);
-      } else {
-        callback(new Error(`Origin '${origin}' not allowed by CORS`));
-      }
-    },
+    origin: isDev
+      ? (origin, callback) => callback(null, true)
+      : ['https://rietberg.de', 'https://www.rietberg.de', 'http://localhost:5173'],
     credentials: true,
   });
 
-  await app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+  const config = new DocumentBuilder()
+    .setTitle('CBG-Rietberg Calendar API')
+    .setDescription(
+      'REST API корпоративного календаря CBG-Rietberg.\n\n' +
+      '**Аутентификация:** Bearer JWT (access-токен, 15 мин). ' +
+      'Получите токены через `POST /api/auth/register` или `POST /api/auth/login`. ' +
+      'Обновляйте через `POST /api/auth/refresh`.\n\n' +
+      '**Роли:** USER — обычный пользователь; ADMIN — полный доступ к /api/users.',
+    )
+    .setVersion('1.0.0')
+    .setContact('CBG-Rietberg Dev', '', 'al.k.84.de@gmail.com')
+    .addBearerAuth(
+      { type: 'http', scheme: 'bearer', bearerFormat: 'JWT', description: 'JWT Access Token' },
+      'access-token',
+    )
+    .build();
+
+  const document = SwaggerModule.createDocument(app, config);
+  SwaggerModule.setup('api/docs', app, document);
+
+  await app.listen(port, () => {
+    console.log(`[${isDev ? 'DEV' : 'PROD'}] Server running on http://localhost:${port}/api`);
+  });
 }
 
 bootstrap();
