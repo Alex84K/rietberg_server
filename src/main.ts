@@ -62,7 +62,7 @@ async function bootstrap() {
   app.enableCors({
     origin: isDev
       ? (origin, callback) => callback(null, true)
-      : ['https://rietberg.de', 'https://www.rietberg.de', 'http://localhost:5173'],
+      : ['https://rietberg-cbg-serv.smartsoftsystem.de', 'http://localhost:5173'],
     credentials: true,
   });
 
