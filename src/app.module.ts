@@ -4,6 +4,7 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { configuration } from './config/configuration';
 import { validateConfig } from './config/validation';
 import { AuthModule } from './modules/auth/auth.module';
+import { CalendarModule } from './modules/calendar/calendar.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { AuthModule } from './modules/auth/auth.module';
       inject: [ConfigService],
     }),
     AuthModule,
+    CalendarModule,
   ],
   controllers: [],
   providers: [],

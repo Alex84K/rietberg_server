@@ -15,6 +15,12 @@ export interface Config {
     email: string;
     password: string;
   };
+  mail: {
+    host: string;
+    port: number;
+    user: string;
+    password: string;
+  };
 }
 
 export function configuration(): Config {
@@ -34,6 +40,12 @@ export function configuration(): Config {
     superadmin: {
       email: process.env.SUPERADMIN_EMAIL || '',
       password: process.env.SUPERADMIN_PASSWORD || '',
+    },
+    mail: {
+      host: process.env.MAIL_HOST || 'smtp.gmail.com',
+      port: parseInt(process.env.MAIL_PORT || '587', 10),
+      user: process.env.MAIL_USERNAME || '',
+      password: process.env.MAIL_PWD || '',
     },
   };
 }

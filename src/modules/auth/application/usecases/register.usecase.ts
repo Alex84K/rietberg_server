@@ -1,10 +1,19 @@
 import { Inject, Injectable, BadRequestException } from '@nestjs/common';
 import type { PasswordHasher } from '../ports/password-hasher.port';
 import type { TokenService, TokenPair } from '../ports/token-service.port';
-import { PASSWORD_HASHER, TOKEN_SERVICE, USER_REPOSITORY } from '../../../../shared/di-tokens';
+import {
+  PASSWORD_HASHER,
+  TOKEN_SERVICE,
+  USER_REPOSITORY,
+} from '../../../../shared/di-tokens';
 import type { UserRepository } from '../../../user/domain/user.repository';
 import { User } from '../../../user/domain/user.entity';
 import { DomainError } from '../../../../shared/domain/domain-error';
+
+export interface RegisterResult {
+  tokens: TokenPair;
+  user: User;
+}
 
 export class RegisterCommand {
   constructor(
@@ -12,7 +21,7 @@ export class RegisterCommand {
     readonly password: string,
     readonly firstName: string,
     readonly lastName: string,
-    readonly phone: string,
+    readonly phone?: string,
   ) {}
 }
 
@@ -24,10 +33,12 @@ export class RegisterUseCase {
     @Inject(USER_REPOSITORY) private readonly userRepository: UserRepository,
   ) {}
 
-  async execute(command: RegisterCommand): Promise<TokenPair> {
+  async execute(command: RegisterCommand): Promise<RegisterResult> {
     const existing = await this.userRepository.findByEmail(command.email);
     if (existing) {
-      throw new BadRequestException(`User with email ${command.email} already exists`);
+      throw new BadRequestException(
+        `User with email ${command.email} already exists`,
+      );
     }
 
     const passwordHash = await this.passwordHasher.hash(command.password);
@@ -42,16 +53,19 @@ export class RegisterUseCase {
         phone: command.phone,
       });
     } catch (error) {
-      if (error instanceof DomainError) throw new BadRequestException(error.message);
+      if (error instanceof DomainError)
+        throw new BadRequestException(error.message);
       throw error;
     }
 
     await this.userRepository.create(user);
 
-    return this.tokenService.generateTokens({
+    const tokens = await this.tokenService.generateTokens({
       userId: user.id,
       email: user.email.value,
       role: user.role.toString(),
     });
+
+    return { tokens, user };
   }
 }

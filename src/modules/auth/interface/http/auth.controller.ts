@@ -14,8 +14,9 @@ import { JwtAuthGuard } from '../../infrastructure/jwt-auth.guard';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { RefreshDto } from './dto/refresh.dto';
-import { TokensDto, MeDto } from './dto/auth-response.dto';
+import { TokensDto, AuthWithUserDto, MeDto } from './dto/auth-response.dto';
 import { DomainError } from '../../../../shared/domain/domain-error';
+import { User } from '../../../user/domain/user.entity';
 
 @ApiTags('Auth')
 @Controller('auth')
@@ -29,30 +30,29 @@ export class AuthController {
 
   @Post('register')
   @HttpCode(201)
-  @ApiOperation({ summary: 'Регистрация нового пользователя', description: 'Создаёт аккаунт с ролью USER и сразу возвращает токены.' })
+  @ApiOperation({ summary: 'Регистрация нового пользователя' })
   @ApiBody({ type: RegisterDto })
-  @ApiResponse({ status: 201, type: TokensDto, description: 'Пара токенов access + refresh' })
+  @ApiResponse({ status: 201, type: AuthWithUserDto })
   @ApiBadRequestResponse({ description: 'Невалидные поля или email уже существует' })
-  async register(@Body() dto: RegisterDto): Promise<TokensDto> {
-    try {
-      return await this.registerUseCase.execute(
-        new RegisterCommand(dto.email, dto.password, dto.firstName, dto.lastName, dto.phone),
-      );
-    } catch (error) {
-      if (error instanceof DomainError) throw new BadRequestException(error.message);
-      throw error;
-    }
+  async register(@Body() dto: RegisterDto): Promise<AuthWithUserDto> {
+    const { tokens, user } = await this.registerUseCase.execute(
+      new RegisterCommand(dto.email, dto.password, dto.firstName, dto.lastName, dto.phone),
+    );
+    return { ...tokens, user: this.toMeDto(user) };
   }
 
   @Post('login')
   @HttpCode(200)
-  @ApiOperation({ summary: 'Вход по email + пароль', description: 'Возвращает пару токенов. Сообщение об ошибке намеренно одинаковое для "не найден" и "неверный пароль".' })
+  @ApiOperation({ summary: 'Вход по email + пароль' })
   @ApiBody({ type: LoginDto })
-  @ApiResponse({ status: 200, type: TokensDto })
+  @ApiResponse({ status: 200, type: AuthWithUserDto })
   @ApiBadRequestResponse({ description: 'Неверный email или пароль' })
-  async login(@Body() dto: LoginDto): Promise<TokensDto> {
+  async login(@Body() dto: LoginDto): Promise<AuthWithUserDto> {
     try {
-      return await this.loginUseCase.execute(new LoginCommand(dto.email, dto.password));
+      const { tokens, user } = await this.loginUseCase.execute(
+        new LoginCommand(dto.email, dto.password),
+      );
+      return { ...tokens, user: this.toMeDto(user) };
     } catch (error) {
       if (error instanceof DomainError) throw new BadRequestException(error.message);
       throw error;
@@ -61,7 +61,7 @@ export class AuthController {
 
   @Post('refresh')
   @HttpCode(200)
-  @ApiOperation({ summary: 'Обновление access-токена', description: 'Принимает refresh-токен, возвращает новую пару. Старый refresh-токен после этого всё ещё валиден (stateless).' })
+  @ApiOperation({ summary: 'Обновление access-токена' })
   @ApiBody({ type: RefreshDto })
   @ApiResponse({ status: 200, type: TokensDto })
   @ApiBadRequestResponse({ description: 'Невалидный или просроченный refresh-токен' })
@@ -77,11 +77,15 @@ export class AuthController {
   @Get('me')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('access-token')
-  @ApiOperation({ summary: 'Текущий пользователь', description: 'Декодирует access-токен и возвращает профиль. Не обращается к БД — данные из токена.' })
+  @ApiOperation({ summary: 'Текущий пользователь' })
   @ApiResponse({ status: 200, type: MeDto })
   @ApiUnauthorizedResponse({ description: 'Токен отсутствует или просрочен' })
   async getMe(@Request() req: any): Promise<MeDto> {
     const user = await this.getMeUseCase.execute(req.user.userId);
+    return this.toMeDto(user);
+  }
+
+  private toMeDto(user: User): MeDto {
     return {
       id: user.id,
       email: user.email.value,

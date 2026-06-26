@@ -3,7 +3,13 @@ import type { PasswordHasher } from '../ports/password-hasher.port';
 import type { TokenService, TokenPair } from '../ports/token-service.port';
 import { PASSWORD_HASHER, TOKEN_SERVICE, USER_REPOSITORY } from '../../../../shared/di-tokens';
 import type { UserRepository } from '../../../user/domain/user.repository';
+import { User } from '../../../user/domain/user.entity';
 import { DomainError } from '../../../../shared/domain/domain-error';
+
+export interface LoginResult {
+  tokens: TokenPair;
+  user: User;
+}
 
 export class LoginCommand {
   constructor(
@@ -23,7 +29,7 @@ export class LoginUseCase {
     private readonly userRepository: UserRepository,
   ) {}
 
-  async execute(command: LoginCommand): Promise<TokenPair> {
+  async execute(command: LoginCommand): Promise<LoginResult> {
     const user = await this.userRepository.findByEmail(command.email);
     if (!user) {
       throw new DomainError('Invalid email or password');
@@ -43,6 +49,6 @@ export class LoginUseCase {
       role: user.role.toString(),
     });
 
-    return tokens;
+    return { tokens, user };
   }
 }

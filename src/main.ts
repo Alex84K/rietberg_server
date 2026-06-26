@@ -20,12 +20,12 @@ class AllExceptionsFilter implements ExceptionFilter {
     if (exception instanceof HttpException) {
       const status = exception.getStatus();
       const exceptionResponse = exception.getResponse();
-      return response.status(status).json({
-        error:
-          typeof exceptionResponse === 'string'
-            ? exceptionResponse
-            : (exceptionResponse as any).message || 'An error occurred',
-      });
+      const message =
+        typeof exceptionResponse === 'string'
+          ? exceptionResponse
+          : (exceptionResponse as any).message;
+      const error = Array.isArray(message) ? message.join('; ') : message || 'An error occurred';
+      return response.status(status).json({ error });
     }
 
     if (exception instanceof Error) {

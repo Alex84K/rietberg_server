@@ -1,0 +1,4 @@
+export enum EventKind {
+  ANNOUNCEMENT = 'ANNOUNCEMENT',
+  REGISTRABLE = 'REGISTRABLE',
+}

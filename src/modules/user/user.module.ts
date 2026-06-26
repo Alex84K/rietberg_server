@@ -21,6 +21,6 @@ import { UsersController } from './interface/http/users.controller';
     DeleteUserUseCase,
   ],
   controllers: [UsersController],
-  exports: [USER_REPOSITORY],
+  exports: [USER_REPOSITORY, GetUserUseCase],
 })
 export class UserModule {}
