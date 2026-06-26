@@ -5,8 +5,10 @@ import {
   PASSWORD_HASHER,
   TOKEN_SERVICE,
   USER_REPOSITORY,
+  NOTIFICATION_SENDER,
 } from '../../../../shared/di-tokens';
 import type { UserRepository } from '../../../user/domain/user.repository';
+import type { NotificationSender } from '../../../notifications/application/ports/notification-sender.port';
 import { User } from '../../../user/domain/user.entity';
 import { DomainError } from '../../../../shared/domain/domain-error';
 
@@ -31,6 +33,7 @@ export class RegisterUseCase {
     @Inject(PASSWORD_HASHER) private readonly passwordHasher: PasswordHasher,
     @Inject(TOKEN_SERVICE) private readonly tokenService: TokenService,
     @Inject(USER_REPOSITORY) private readonly userRepository: UserRepository,
+    @Inject(NOTIFICATION_SENDER) private readonly notificationSender: NotificationSender,
   ) {}
 
   async execute(command: RegisterCommand): Promise<RegisterResult> {
@@ -59,6 +62,14 @@ export class RegisterUseCase {
     }
 
     await this.userRepository.create(user);
+
+    void this.notificationSender
+      .sendWelcome({
+        recipientEmail: user.email.value,
+        firstName: user.firstName,
+        lastName: user.lastName,
+      })
+      .catch(() => {});
 
     const tokens = await this.tokenService.generateTokens({
       userId: user.id,

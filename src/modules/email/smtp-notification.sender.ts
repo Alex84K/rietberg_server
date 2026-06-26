@@ -4,6 +4,7 @@ import * as nodemailer from 'nodemailer';
 import type {
   NotificationSender,
   RegistrationNotification,
+  WelcomeNotification,
 } from '../notifications/application/ports/notification-sender.port';
 
 @Injectable()
@@ -66,6 +67,57 @@ export class SmtpNotificationSender implements NotificationSender {
       this.logger.log(`Confirmation sent → ${data.participantEmail}`);
     } catch (err) {
       this.logger.error(`Failed to send confirmation to ${data.participantEmail}`, err);
+    }
+  }
+
+  async sendWelcome(data: WelcomeNotification): Promise<void> {
+    const html = `<!DOCTYPE html>
+<html lang="de">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#f4f4f4;font-family:Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f4;padding:32px 0;">
+    <tr><td align="center">
+      <table width="560" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:6px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.08);">
+
+        <tr>
+          <td style="background:#1a3a5c;padding:28px 40px;">
+            <p style="margin:0;color:#ffffff;font-size:20px;font-weight:bold;letter-spacing:.5px;">CBG Rietberg</p>
+          </td>
+        </tr>
+
+        <tr>
+          <td style="padding:36px 40px 28px;">
+            <p style="margin:0 0 16px;font-size:16px;color:#222;">Liebe/r ${data.firstName} ${data.lastName},</p>
+            <p style="margin:0 0 16px;font-size:15px;color:#444;line-height:1.6;">
+              herzlich willkommen! Ihr Konto wurde erfolgreich erstellt.
+              Ab sofort können Sie sich für Veranstaltungen anmelden.
+            </p>
+          </td>
+        </tr>
+
+        <tr>
+          <td style="padding:0 40px 36px;">
+            <hr style="border:none;border-top:1px solid #e8e8e8;margin:0 0 24px;">
+            <p style="margin:0;font-size:13px;color:#999;">Mit freundlichen Grüßen &mdash; CBG Rietberg</p>
+          </td>
+        </tr>
+
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+
+    try {
+      await this.transporter.sendMail({
+        from: `"CBG Rietberg" <${this.fromAddress}>`,
+        to: data.recipientEmail,
+        subject: 'Willkommen bei CBG Rietberg',
+        html,
+      });
+      this.logger.log(`Welcome email sent → ${data.recipientEmail}`);
+    } catch (err) {
+      this.logger.error(`Failed to send welcome email to ${data.recipientEmail}`, err);
     }
   }
 

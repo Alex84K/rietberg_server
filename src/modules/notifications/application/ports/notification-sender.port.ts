@@ -8,6 +8,13 @@ export interface RegistrationNotification {
   adminEmail: string;
 }
 
+export interface WelcomeNotification {
+  recipientEmail: string;
+  firstName: string;
+  lastName: string;
+}
+
 export interface NotificationSender {
   sendRegistrationConfirmation(data: RegistrationNotification): Promise<void>;
+  sendWelcome(data: WelcomeNotification): Promise<void>;
 }

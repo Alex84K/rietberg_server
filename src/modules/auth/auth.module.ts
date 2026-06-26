@@ -2,6 +2,7 @@ import { Module, OnModuleInit } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { UserModule } from '../user/user.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 import { PASSWORD_HASHER, TOKEN_SERVICE } from '../../shared/di-tokens';
 import { Argon2Hasher } from './infrastructure/argon2-hasher';
 import { JwtTokenService } from './infrastructure/jwt-token.service';
@@ -16,7 +17,7 @@ import { GetMeUseCase } from './application/usecases/get-me.usecase';
 import { AuthController } from './interface/http/auth.controller';
 
 @Module({
-  imports: [PassportModule, JwtModule.register({}), UserModule],
+  imports: [PassportModule, JwtModule.register({}), UserModule, NotificationsModule],
   providers: [
     {
       provide: PASSWORD_HASHER,
